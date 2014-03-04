@@ -147,6 +147,49 @@ module NBayes
       }
     end
 
+    # Support the Marshal interface.
+    def marshal_dump
+      # We export a version of tokens into grouped_tokens, which has the
+      # frequency as the key, and an array of tokens as the value.  This
+      # shrinks the size of the serialized data by about 33% on large trained
+      # classifiers.
+      result = {}
+      @data.each do |cls, obj|
+        built = {
+          :total_tokens => obj[:total_tokens],
+          :examples => obj[:examples],
+          :grouped_tokens => {}
+        }
+
+        obj[:tokens].each do |token, count|
+          built[:grouped_tokens][count] ||= []
+          built[:grouped_tokens][count].push(token)
+        end
+        result[cls] = built
+      end
+
+      # Return with a key to allow future attributes
+      { :data => result }
+    end
+
+    def marshal_load(obj)
+      # We have to unravel the grouping done by permuting grouped_tokens
+      # into tokens.
+      @data = {}
+      obj[:data].each do |cls, obj|
+        built = new_category
+        built[:total_tokens] = obj[:total_tokens]
+        built[:examples] = obj[:examples]
+
+        obj[:grouped_tokens].each do |count, tokens|
+          tokens.each do |token|
+            built[:tokens][token] = count
+          end
+        end
+        @data[cls] = built
+      end
+      # No need to reset_after_import as we initialized with new_category
+    end
   end
 
   class Base
@@ -297,7 +340,6 @@ module NBayes
         YAML.dump(arg)
       end
     end
-
   end
 
   module Result

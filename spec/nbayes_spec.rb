@@ -149,6 +149,21 @@ describe "NBayes" do
     end
   end
 
+  describe "marshalling" do
+    it "should be marshal-able" do
+      @nbayes.train( %w[a a a a], 'classA' )
+      @nbayes.train( %w[b b b b], 'classB' )
+      results = @nbayes.classify( ['b'] )
+      results['classB'].should >= 0.5
+
+      serialized = Marshal.dump(@nbayes)
+
+      nbayes2 = Marshal.load(serialized)
+      results = nbayes2.classify( ['b'] )
+      results['classB'].should >= 0.5
+    end
+  end
+
   it "should dump to yaml string and load from yaml string" do
     @nbayes.train( %w[a a a a], 'classA' )
     @nbayes.train( %w[b b b b], 'classB' )
